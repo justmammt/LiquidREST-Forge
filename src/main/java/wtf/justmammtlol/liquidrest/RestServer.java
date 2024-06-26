@@ -143,7 +143,7 @@ public class RestServer {
                     ServerPlayer player = getPlayerByName(request.player);
 
 
-                    if (player.connection != null) {
+                    if (player.connection.getConnection().isConnected()) {
                         player.connection.disconnect(new TranslatableComponent("multiplayer.disconnect.kicked"));
 
                         String response = "Successfully kicked " + request.player;
