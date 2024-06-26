@@ -10,6 +10,10 @@ public class LiquidRESTServerConfigs {
 
     public static final ForgeConfigSpec.ConfigValue<Integer> WEBSERVER_FIXED_THREADS_COUNT;
 
+    public static final ForgeConfigSpec.ConfigValue<String> WEBSERVER_BASICAUTH_USER;
+
+    public static final ForgeConfigSpec.ConfigValue<String> WEBSERVER_BASICAUTH_PASS;
+
     static {
         BUILDER.push("Configuration for LiquidREST");
 
@@ -18,6 +22,14 @@ public class LiquidRESTServerConfigs {
 
         WEBSERVER_FIXED_THREADS_COUNT = BUILDER.comment("The amount of threads the http server should rely on:")
                 .defineInRange("Threads", 4, 1, 2048);
+
+        BUILDER.push("Webserver Authentication Configuration");
+
+        WEBSERVER_BASICAUTH_USER = BUILDER.comment("The Authentication username")
+                .define("Username", "user");
+
+        WEBSERVER_BASICAUTH_PASS = BUILDER.comment("The Authentication password")
+                .define("Password", "pass");
 
         BUILDER.pop();
         SPEC = BUILDER.build();

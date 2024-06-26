@@ -2,26 +2,43 @@ package wtf.justmammtlol.liquidrest;
 
 import com.mojang.logging.LogUtils;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.*;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.commands.KickCommand;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.server.ServerLifecycleHooks;
+import org.apache.logging.log4j.core.jmx.Server;
 import org.slf4j.Logger;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import com.google.gson.Gson;
+
+import javax.annotation.Nullable;
+import javax.json.stream.JsonParsingException;
+import java.io.*;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+
+import static java.lang.Integer.parseInt;
+import static java.util.concurrent.Executors.newFixedThreadPool;
 
 
 public class RestServer {
     static HttpServer server;
+    static Gson gson = new Gson();
+
+    class Request {
+        String player;
+    }
 
     static {
         try {
-            server = HttpServer.create(new InetSocketAddress(LiquidRESTServerConfigs.WEBSERVER_PORT.get()), 0);
+            server = HttpServer.create();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -29,20 +46,29 @@ public class RestServer {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public void main() {
+    public void main() throws IOException {
 
 
         server.createContext("/", new RootHandler());
         server.createContext("/player/health", new PlayerHealthHandler());
+        HttpContext PlayerKick = server.createContext("/player/kick", new PlayerKickHandler());
+        PlayerKick.setAuthenticator(new BasicAuthenticator("PlayerKickHandler") {
+            @Override
+            public boolean checkCredentials(String user, String pwd) {
+                return user.equals(LiquidRESTServerConfigs.WEBSERVER_BASICAUTH_USER.get()) && pwd.equals(LiquidRESTServerConfigs.WEBSERVER_BASICAUTH_PASS.get());
+            }
+        });
 
-        server.setExecutor(java.util.concurrent.Executors.newFixedThreadPool(LiquidRESTServerConfigs.WEBSERVER_FIXED_THREADS_COUNT.get()));
+        server.setExecutor(newFixedThreadPool(4));
+        server.bind(new InetSocketAddress(LiquidRESTServerConfigs.WEBSERVER_PORT.get()), -1);
         server.start();
 
-        LOGGER.info("LiquidREST is running on port " + LiquidRESTServerConfigs.WEBSERVER_PORT.get());
+        LOGGER.info("LiquidREST is running on  " + server.getAddress());
 
     }
 
     public static void stop() {
+
         server.stop(1);
         LOGGER.info("Stopped LiquidREST threads");
     }
@@ -79,8 +105,8 @@ public class RestServer {
         public void handle(HttpExchange exchange) throws IOException {
             Map<String, String> params = queryToMap(exchange.getRequestURI().getQuery());
             if (params.get("player") != null) {
-
                 ServerPlayer player = getPlayerByName(params.get("player"));
+
                 if (player != null) {
                     String response = String.valueOf(player.getHealth());
                     exchange.sendResponseHeaders(200, response.length());
@@ -97,7 +123,7 @@ public class RestServer {
 
             } else if (params.get("player") == null) {
                 String response = "You must specify a player query";
-                exchange.sendResponseHeaders(404, response.length());
+                exchange.sendResponseHeaders(400, response.length());
                 OutputStream os = exchange.getResponseBody();
                 os.write(response.getBytes());
                 exchange.close();
@@ -105,7 +131,70 @@ public class RestServer {
         }
     }
 
-    private ServerPlayer getPlayerByName(String player) {
-        return ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayerByName(player);
+    static class PlayerKickHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException, JsonParsingException {
+            String requestBody = InputStreamToString(exchange.getRequestBody());
+            if (exchange.getRequestMethod().equalsIgnoreCase("PATCH")) {
+                Request request = gson.fromJson(requestBody, Request.class);
+
+                if (request.player != null) {
+
+                    ServerPlayer player = getPlayerByName(request.player);
+
+
+                    if (player.connection != null) {
+                        player.connection.disconnect(new TranslatableComponent("multiplayer.disconnect.kicked"));
+
+                        String response = "Successfully kicked " + request.player;
+
+                        exchange.sendResponseHeaders(200, response.length());
+                        OutputStream os = exchange.getResponseBody();
+                        os.write(response.getBytes());
+                    } else {
+
+                        String response = "Player doesn't exist or is offline";
+                        exchange.sendResponseHeaders(409, requestBody.length());
+                        OutputStream os = exchange.getResponseBody();
+                        os.write(response.getBytes());
+                    }
+                    exchange.close();
+                } else {
+                    String response = "You must specify a player";
+                    exchange.sendResponseHeaders(409, requestBody.length());
+                    OutputStream os = exchange.getResponseBody();
+                    os.write(response.getBytes());
+                    exchange.close();
+                }
+            } else {
+                String response = "This handler is PATCH only.";
+                exchange.sendResponseHeaders(405, response.length());
+                OutputStream os = exchange.getResponseBody();
+                os.write(response.getBytes());
+                exchange.close();
+            }
+            exchange.close();
+        }
     }
+
+    @Nullable
+    public static ServerPlayer getPlayerByName(String player) {
+        for(ServerPlayer serverplayer : ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers()) {
+            if (serverplayer.getGameProfile().getName().equalsIgnoreCase(player)) {
+                return serverplayer;
+            }
+        }
+
+        return null;
+    }
+
+    private static String InputStreamToString(InputStream istr) throws IOException {
+        ByteArrayOutputStream result = new ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        for (int length; (length = istr.read(buffer)) != -1; ) {
+            result.write(buffer, 0, length);
+        }
+        return result.toString(StandardCharsets.UTF_8);
+    }
+
 }

@@ -18,7 +18,7 @@ plugins {
 apply plugin: 'net.minecraftforge.gradle'
 
 
-version = '0.1.2a-1.18.2'
+version = '0.2.0a-1.18.2'
 group = 'wtf.justmammtlol.liquidrest' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = 'liquidrest'
 
@@ -149,12 +149,17 @@ repositories {
     // }
 }
 
+configurations {
+    shade
+    implementation.extendsFrom shade
+}
+
 dependencies {
     // Specify the version of Minecraft to use. If this is any group other than 'net.minecraft', it is assumed
     // that the dep is a ForgeGradle 'patcher' dependency, and its patches will be applied.
     // The userdev artifact is a special name and will get all sorts of transformations applied to it.
     minecraft 'net.minecraftforge:forge:1.18.2-40.2.0'
-
+    shade 'com.google.code.gson:gson:2.11.0'
     // Real mod deobf dependency examples - these get remapped to your current mappings
     // compileOnly fg.deobf("mezz.jei:jei-${mc_version}:${jei_version}:api") // Adds JEI API as a compile dependency
     // runtimeOnly fg.deobf("mezz.jei:jei-${mc_version}:${jei_version}") // Adds the full JEI mod as a runtime dependency
@@ -170,17 +175,22 @@ dependencies {
 
 // Example for how to get properties into the manifest for reading at runtime.
 jar {
+    archiveClassifier = 'slim'
     manifest {
-        attributes([
-                "Specification-Title"     : "liquidrest",
-                "Specification-Vendor"    : "liquidrestsareus",
-                "Specification-Version"   : "1", // We are version 1 of ourselves
-                "Implementation-Title"    : project.name,
-                "Implementation-Version"  : project.jar.archiveVersion,
-                "Implementation-Vendor"   : "liquidrestsareus",
-                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
-        ])
     }
+}
+
+shadowJar {
+    archiveClassifier = 'shaded'
+    configurations = [project.configurations.shade]
+    relocate 'com.google.code.gson', "${project.group}.relocated.gson"
+    finalizedBy 'reobfShadowJar'
+}
+
+assemble.dependsOn shadowJar
+
+reobf {
+    shadowJar {}
 }
 
 // Example configuration to allow publishing using the maven-publish plugin
