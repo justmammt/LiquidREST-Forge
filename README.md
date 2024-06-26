@@ -12,8 +12,8 @@ There are various possible usages of this mod starting and not limited to: simpl
 _They aren't ordered by priority_  
   
 - Mekanism Soft-integration  
-- Basic Authentication  
-- ~~Proper configuration~~  ✅
+- ~~Basic Authentication~~ ✅
+- ~~Proper configuration~~ ✅
 - Player information handlers  
 - Player info editing handlers  
 - ~~Usage docs (HIGH PRIORITY)~~ ✅
