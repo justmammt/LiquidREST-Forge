@@ -14,7 +14,7 @@ _They aren't ordered by priority_
 - Mekanism Soft-integration  
 - Basic Authentication  
 - ~~Proper configuration~~  ✅
-- Player informations handlers  
+- Player information handlers  
 - Player info editing handlers  
 - ~~Usage docs (HIGH PRIORITY)~~ ✅
 
