@@ -1,6 +1,8 @@
+![CurseForge Downloads](https://img.shields.io/curseforge/dt/1050068) ![CurseForge Version](https://img.shields.io/curseforge/v/1050068)
+
 
 # LiquidREST  
-Server-side only Multi-threaded Forge Informations API   
+Server-side only Multi-threaded Forge Information API   
 
 **LiquidREST** is a simple http server that runs in parallels to the Server thread, it returns/modifies informations about players/worlds/environment  
   
