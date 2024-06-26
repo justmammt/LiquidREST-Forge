@@ -1,4 +1,4 @@
-<p align="center">![CurseForge Downloads](https://img.shields.io/curseforge/dt/1050068) ![CurseForge Version](https://img.shields.io/curseforge/v/1050068)</p>
+<div align="center">![CurseForge Downloads](https://img.shields.io/curseforge/dt/1050068) ![CurseForge Version](https://img.shields.io/curseforge/v/1050068)</div>
 
 
 # LiquidREST  
