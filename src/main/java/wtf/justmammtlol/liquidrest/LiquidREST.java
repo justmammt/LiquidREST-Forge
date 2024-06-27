@@ -21,7 +21,6 @@ import java.io.IOException;
 
 @Mod(LiquidREST.MOD_ID)
 public class LiquidREST {
-    // Directly reference a slf4j logger
     RestServer rest = new RestServer();
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final String MOD_ID = "liquidrest";

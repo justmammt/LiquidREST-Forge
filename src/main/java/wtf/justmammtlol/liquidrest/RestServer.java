@@ -3,15 +3,9 @@ package wtf.justmammtlol.liquidrest;
 import com.mojang.logging.LogUtils;
 
 import com.sun.net.httpserver.*;
-import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.commands.KickCommand;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.server.ServerLifecycleHooks;
-import org.apache.logging.log4j.core.jmx.Server;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
 import com.google.gson.Gson;
@@ -21,21 +15,16 @@ import javax.json.stream.JsonParsingException;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ThreadPoolExecutor;
 
-import static java.lang.Integer.parseInt;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 
 
 public class RestServer {
     static HttpServer server;
     static Gson gson = new Gson();
-
-    class Request {
-        String player = null;
-    }
 
     static {
         try {
@@ -52,13 +41,13 @@ public class RestServer {
 
         server.createContext("/", new RootHandler());
         server.createContext("/player/health", new PlayerHealthHandler());
-        HttpContext PlayerKick = server.createContext("/player/kick", new PlayerKickHandler());
-        PlayerKick.setAuthenticator(new BasicAuthenticator("PlayerKickHandler") {
-            @Override
-            public boolean checkCredentials(String user, String pwd) {
-                return user.equals(LiquidRESTServerConfigs.WEBSERVER_BASICAUTH_USER.get()) && pwd.equals(LiquidRESTServerConfigs.WEBSERVER_BASICAUTH_PASS.get());
-            }
-        });
+        server.createContext("/player/kick", new PlayerKickHandler())
+                .setAuthenticator(new BasicAuthenticator("PlayerKickHandler") {
+                    @Override
+                    public boolean checkCredentials(String user, String pwd) {
+                        return user.equals(LiquidRESTServerConfigs.WEBSERVER_BASICAUTH_USER.get()) && pwd.equals(LiquidRESTServerConfigs.WEBSERVER_BASICAUTH_PASS.get());
+                    }
+                });
 
         server.setExecutor(newFixedThreadPool(4));
         server.bind(new InetSocketAddress(LiquidRESTServerConfigs.WEBSERVER_PORT.get()), -1);
@@ -133,6 +122,10 @@ public class RestServer {
     }
 
     class PlayerKickHandler implements HttpHandler {
+        class Request {
+            String player = null;
+        }
+
         @Override
         public void handle(HttpExchange exchange) throws IOException, JsonParsingException {
             String requestBody = InputStreamToString(exchange.getRequestBody());
@@ -174,6 +167,8 @@ public class RestServer {
         }
     }
 
+
+    // Start of reusable functions
     @Nullable
     public ServerPlayer getPlayerByName(String player) {
         for (ServerPlayer serverplayer : ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers()) {
