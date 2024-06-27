@@ -31,9 +31,7 @@ public class LiquidREST {
 
     public LiquidREST() {
         ModLoadingContext.get().registerExtensionPoint(IExtensionPoint.DisplayTest.class, () -> new IExtensionPoint.DisplayTest(() -> NetworkConstants.IGNORESERVERONLY, (a, b) -> true));
-
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
-        // Register ourselves for server and other game events we are interested in
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, LiquidRESTServerConfigs.SPEC, "liquidrest-server.toml");
         MinecraftForge.EVENT_BUS.register(this);
     }

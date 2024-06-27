@@ -11,6 +11,7 @@ import net.minecraft.server.commands.KickCommand;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import org.apache.logging.log4j.core.jmx.Server;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
 import com.google.gson.Gson;
@@ -33,7 +34,7 @@ public class RestServer {
     static Gson gson = new Gson();
 
     class Request {
-        String player;
+        String player = null;
     }
 
     static {
@@ -107,19 +108,19 @@ public class RestServer {
             if (params.get("player") != null) {
                 ServerPlayer player = getPlayerByName(params.get("player"));
 
+                String response;
                 if (player != null) {
-                    String response = String.valueOf(player.getHealth());
+                    response = String.valueOf(player.getHealth());
                     exchange.sendResponseHeaders(200, response.length());
                     OutputStream os = exchange.getResponseBody();
                     os.write(response.getBytes());
-                    exchange.close();
                 } else {
-                    String response = "Player not found";
+                    response = "Player not found";
                     exchange.sendResponseHeaders(404, response.length());
                     OutputStream os = exchange.getResponseBody();
                     os.write(response.getBytes());
-                    exchange.close();
                 }
+                exchange.close();
 
             } else if (params.get("player") == null) {
                 String response = "You must specify a player query";
@@ -131,7 +132,7 @@ public class RestServer {
         }
     }
 
-    static class PlayerKickHandler implements HttpHandler {
+    class PlayerKickHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException, JsonParsingException {
             String requestBody = InputStreamToString(exchange.getRequestBody());
@@ -139,54 +140,50 @@ public class RestServer {
                 Request request = gson.fromJson(requestBody, Request.class);
 
                 if (request.player != null) {
-
                     ServerPlayer player = getPlayerByName(request.player);
-
-
-                    if (player.connection.getConnection().isConnected()) {
+                    if (getPlayerByName(request.player) != null) {
                         player.connection.disconnect(new TranslatableComponent("multiplayer.disconnect.kicked"));
-
                         String response = "Successfully kicked " + request.player;
-
                         exchange.sendResponseHeaders(200, response.length());
                         OutputStream os = exchange.getResponseBody();
                         os.write(response.getBytes());
+                        exchange.close();
                     } else {
-
                         String response = "Player doesn't exist or is offline";
-                        exchange.sendResponseHeaders(409, requestBody.length());
+                        exchange.sendResponseHeaders(409, response.length());
                         OutputStream os = exchange.getResponseBody();
                         os.write(response.getBytes());
+                        exchange.close();
                     }
-                    exchange.close();
+
                 } else {
                     String response = "You must specify a player";
-                    exchange.sendResponseHeaders(409, requestBody.length());
+                    exchange.sendResponseHeaders(409, response.length());
                     OutputStream os = exchange.getResponseBody();
                     os.write(response.getBytes());
                     exchange.close();
                 }
             } else {
+
                 String response = "This handler is PATCH only.";
                 exchange.sendResponseHeaders(405, response.length());
                 OutputStream os = exchange.getResponseBody();
                 os.write(response.getBytes());
                 exchange.close();
             }
-            exchange.close();
         }
     }
 
     @Nullable
-    public static ServerPlayer getPlayerByName(String player) {
-        for(ServerPlayer serverplayer : ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers()) {
+    public ServerPlayer getPlayerByName(String player) {
+        for (ServerPlayer serverplayer : ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers()) {
             if (serverplayer.getGameProfile().getName().equalsIgnoreCase(player)) {
                 return serverplayer;
             }
         }
-
         return null;
     }
+
 
     private static String InputStreamToString(InputStream istr) throws IOException {
         ByteArrayOutputStream result = new ByteArrayOutputStream();
