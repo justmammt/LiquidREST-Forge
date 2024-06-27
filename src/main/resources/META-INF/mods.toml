@@ -23,7 +23,7 @@ version="0.3.0a-1.18.2" #mandatory
  # A display name for the mod
 displayName="LiquidREST" #mandatory
 # A URL to query for updates for this mod. See the JSON update specification https://mcforge.readthedocs.io/en/latest/gettingstarted/autoupdate/
-#updateJSONURL="https://change.me.example.invalid/updates.json" #optional
+updateJSONURL="https://github.com/justmammt/LiquidREST-Forge/blob/master/update.json" #optional
 # A URL for the "homepage" for this mod, displayed in the mod UI
 displayURL="https://liquidrest.fanilla.cloud/" #optional
 # A file name (in the root of the mod JAR) containing a logo for display
@@ -50,11 +50,9 @@ LiquidREST is a simple http server that runs in parallels to the Server thread, 
     ordering="NONE"
     # Side this dependency is applied on - BOTH, CLIENT or SERVER
     side="SERVER"
-# Here's another dependency
 [[dependencies.liquidrest]]
     modId="minecraft"
     mandatory=true
-# This version range declares a minimum of the current minecraft version up to but not including the next major version
     versionRange="[1.18.2,)"
     ordering="NONE"
     side="BOTH"

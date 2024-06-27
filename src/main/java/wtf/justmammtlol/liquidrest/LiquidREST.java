@@ -49,10 +49,10 @@ public class LiquidREST {
     }
 
     @SubscribeEvent
-    public void onServerStopping(ServerStoppingEvent event) throws IOException {
+    public void onServerStopping(ServerStoppingEvent event) {
         // Do something when the server starts
         LOGGER.info("Shutting down LiquidREST threads");
-        rest.stop();
+        RestServer.stop();
     }
 
 }

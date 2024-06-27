@@ -17,10 +17,8 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ThreadPoolExecutor;
 
 import static java.util.concurrent.Executors.newFixedThreadPool;
-
 
 public class RestServer {
     static HttpServer server;
@@ -43,6 +41,13 @@ public class RestServer {
         server.createContext("/player/health", new PlayerHealthHandler());
         server.createContext("/player/kick", new PlayerKickHandler())
                 .setAuthenticator(new BasicAuthenticator("PlayerKickHandler") {
+                    @Override
+                    public boolean checkCredentials(String user, String pwd) {
+                        return user.equals(LiquidRESTServerConfigs.WEBSERVER_BASICAUTH_USER.get()) && pwd.equals(LiquidRESTServerConfigs.WEBSERVER_BASICAUTH_PASS.get());
+                    }
+                });
+        server.createContext("/player/kill", new PlayerKillHandler())
+                .setAuthenticator(new BasicAuthenticator("PlayerKillHandler") {
                     @Override
                     public boolean checkCredentials(String user, String pwd) {
                         return user.equals(LiquidRESTServerConfigs.WEBSERVER_BASICAUTH_USER.get()) && pwd.equals(LiquidRESTServerConfigs.WEBSERVER_BASICAUTH_PASS.get());
@@ -93,25 +98,33 @@ public class RestServer {
     class PlayerHealthHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            Map<String, String> params = queryToMap(exchange.getRequestURI().getQuery());
-            if (params.get("player") != null) {
-                ServerPlayer player = getPlayerByName(params.get("player"));
+            if (exchange.getRequestURI().getQuery() != null) {
+                Map<String, String> params = queryToMap(exchange.getRequestURI().getQuery());
+                if (params.get("player") != null && params != null) {
+                    ServerPlayer player = getPlayerByName(params.get("player"));
 
-                String response;
-                if (player != null) {
-                    response = String.valueOf(player.getHealth());
-                    exchange.sendResponseHeaders(200, response.length());
-                    OutputStream os = exchange.getResponseBody();
-                    os.write(response.getBytes());
+                    String response;
+                    if (player != null) {
+                        response = String.valueOf(player.getHealth());
+                        exchange.sendResponseHeaders(200, response.length());
+                        OutputStream os = exchange.getResponseBody();
+                        os.write(response.getBytes());
+                    } else {
+                        response = "Player not found";
+                        exchange.sendResponseHeaders(404, response.length());
+                        OutputStream os = exchange.getResponseBody();
+                        os.write(response.getBytes());
+                    }
+                    exchange.close();
+
                 } else {
-                    response = "Player not found";
-                    exchange.sendResponseHeaders(404, response.length());
+                    String response = "You must specify a player query";
+                    exchange.sendResponseHeaders(400, response.length());
                     OutputStream os = exchange.getResponseBody();
                     os.write(response.getBytes());
+                    exchange.close();
                 }
-                exchange.close();
-
-            } else if (params.get("player") == null) {
+            } else {
                 String response = "You must specify a player query";
                 exchange.sendResponseHeaders(400, response.length());
                 OutputStream os = exchange.getResponseBody();
@@ -119,10 +132,60 @@ public class RestServer {
                 exchange.close();
             }
         }
+
+
     }
 
+    class PlayerKillHandler implements HttpHandler {
+        static class Request {
+            String player = null;
+        }
+
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+
+            String requestBody = InputStreamToString(exchange.getRequestBody());
+            if (exchange.getRequestMethod().equalsIgnoreCase("PATCH")) {
+                Request request = gson.fromJson(requestBody, Request.class);
+
+                if (request.player != null) {
+                    ServerPlayer player = getPlayerByName(request.player);
+                    if (getPlayerByName(request.player) != null) {
+                        player.connection.disconnect(new TranslatableComponent("multiplayer.disconnect.kicked"));
+                        String response = "Successfully kicked " + request.player;
+                        exchange.sendResponseHeaders(200, response.length());
+                        OutputStream os = exchange.getResponseBody();
+                        os.write(response.getBytes());
+                        exchange.close();
+                    } else {
+                        String response = "Player doesn't exist or is offline";
+                        exchange.sendResponseHeaders(409, response.length());
+                        OutputStream os = exchange.getResponseBody();
+                        os.write(response.getBytes());
+                        exchange.close();
+                    }
+
+                } else {
+                    String response = "You must specify a player";
+                    exchange.sendResponseHeaders(409, response.length());
+                    OutputStream os = exchange.getResponseBody();
+                    os.write(response.getBytes());
+                    exchange.close();
+                }
+            } else {
+
+                String response = "This handler is PATCH only.";
+                exchange.sendResponseHeaders(405, response.length());
+                OutputStream os = exchange.getResponseBody();
+                os.write(response.getBytes());
+                exchange.close();
+            }
+        }
+    }
+
+
     class PlayerKickHandler implements HttpHandler {
-        class Request {
+        static class Request {
             String player = null;
         }
 
@@ -168,7 +231,8 @@ public class RestServer {
     }
 
 
-    // Start of reusable functions
+// Start of reusable functions
+
     @Nullable
     public ServerPlayer getPlayerByName(String player) {
         for (ServerPlayer serverplayer : ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers()) {
@@ -180,7 +244,7 @@ public class RestServer {
     }
 
 
-    private static String InputStreamToString(InputStream istr) throws IOException {
+    static String InputStreamToString(InputStream istr) throws IOException {
         ByteArrayOutputStream result = new ByteArrayOutputStream();
         byte[] buffer = new byte[1024];
         for (int length; (length = istr.read(buffer)) != -1; ) {
@@ -188,5 +252,5 @@ public class RestServer {
         }
         return result.toString(StandardCharsets.UTF_8);
     }
-
 }
+
