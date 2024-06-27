@@ -20,7 +20,7 @@ plugins {
 apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'org.parchmentmc.librarian.forgegradle'
 
-version = '0.3.0a-1.18.2'
+version = '0.3.1a-1.18.2'
 group = 'wtf.justmammtlol.liquidrest' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = 'liquidrest'
 
@@ -153,8 +153,8 @@ repositories {
 }
 
 configurations {
-    shade
-    implementation.extendsFrom shade
+   /* shade
+    implementation.extendsFrom shade*/
 }
 
 dependencies {
@@ -162,7 +162,7 @@ dependencies {
     // that the dep is a ForgeGradle 'patcher' dependency, and its patches will be applied.
     // The userdev artifact is a special name and will get all sorts of transformations applied to it.
     minecraft 'net.minecraftforge:forge:1.18.2-40.2.0'
-    shade 'com.google.code.gson:gson:2.11.0'
+    // shade 'com.google.code.gson:gson:2.11.0'
     // Real mod deobf dependency examples - these get remapped to your current mappings
     // compileOnly fg.deobf("mezz.jei:jei-${mc_version}:${jei_version}:api") // Adds JEI API as a compile dependency
     // runtimeOnly fg.deobf("mezz.jei:jei-${mc_version}:${jei_version}") // Adds the full JEI mod as a runtime dependency
@@ -178,15 +178,15 @@ dependencies {
 
 // Example for how to get properties into the manifest for reading at runtime.
 jar {
-    archiveClassifier = 'slim'
+    archiveClassifier = ''
     manifest {
     }
 }
-
+/*
 shadowJar {
     archiveClassifier = 'shaded'
     configurations = [project.configurations.shade]
-    relocate 'com.google.code.gson', "${project.group}.relocated.gson"
+    relocate '', ""
     finalizedBy 'reobfShadowJar'
 }
 
@@ -194,7 +194,7 @@ assemble.dependsOn shadowJar
 
 reobf {
     shadowJar {}
-}
+}*/
 
 // Example configuration to allow publishing using the maven-publish plugin
 // This is the preferred method to reobfuscate your jar file

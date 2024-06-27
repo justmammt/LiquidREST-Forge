@@ -5,6 +5,7 @@ import com.mojang.logging.LogUtils;
 import com.sun.net.httpserver.*;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 
@@ -100,7 +101,7 @@ public class RestServer {
         public void handle(HttpExchange exchange) throws IOException {
             if (exchange.getRequestURI().getQuery() != null) {
                 Map<String, String> params = queryToMap(exchange.getRequestURI().getQuery());
-                if (params.get("player") != null && params != null) {
+                if (params.get("player") != null) {
                     ServerPlayer player = getPlayerByName(params.get("player"));
 
                     String response;
@@ -143,31 +144,39 @@ public class RestServer {
 
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-
-            String requestBody = InputStreamToString(exchange.getRequestBody());
             if (exchange.getRequestMethod().equalsIgnoreCase("PATCH")) {
-                Request request = gson.fromJson(requestBody, Request.class);
+                if (exchange.getRequestBody().available() != 0) {
+                    String requestBody = InputStreamToString(exchange.getRequestBody());
+                    Request request = gson.fromJson(requestBody, Request.class);
 
-                if (request.player != null) {
-                    ServerPlayer player = getPlayerByName(request.player);
-                    if (getPlayerByName(request.player) != null) {
-                        player.connection.disconnect(new TranslatableComponent("multiplayer.disconnect.kicked"));
-                        String response = "Successfully kicked " + request.player;
-                        exchange.sendResponseHeaders(200, response.length());
-                        OutputStream os = exchange.getResponseBody();
-                        os.write(response.getBytes());
-                        exchange.close();
+                    if (request.player != null) {
+                        if (getPlayerByName(request.player) != null) {
+                            ServerPlayer player = getPlayerByName(request.player);
+                            player.hurt(DamageSource.OUT_OF_WORLD, Float.MAX_VALUE);
+                            LOGGER.info(player.getName().getString() + " killed by " + exchange.getRemoteAddress());
+                            String response = "Successfully killed " + request.player;
+                            exchange.sendResponseHeaders(200, response.length());
+                            OutputStream os = exchange.getResponseBody();
+                            os.write(response.getBytes());
+                            exchange.close();
+                        } else {
+                            String response = "Player doesn't exist or is offline";
+                            exchange.sendResponseHeaders(409, response.length());
+                            OutputStream os = exchange.getResponseBody();
+                            os.write(response.getBytes());
+                            exchange.close();
+                        }
+
                     } else {
-                        String response = "Player doesn't exist or is offline";
-                        exchange.sendResponseHeaders(409, response.length());
+                        String response = "You must specify a player";
+                        exchange.sendResponseHeaders(400, response.length());
                         OutputStream os = exchange.getResponseBody();
                         os.write(response.getBytes());
                         exchange.close();
                     }
-
                 } else {
                     String response = "You must specify a player";
-                    exchange.sendResponseHeaders(409, response.length());
+                    exchange.sendResponseHeaders(400, response.length());
                     OutputStream os = exchange.getResponseBody();
                     os.write(response.getBytes());
                     exchange.close();
@@ -183,7 +192,6 @@ public class RestServer {
         }
     }
 
-
     class PlayerKickHandler implements HttpHandler {
         static class Request {
             String player = null;
@@ -191,30 +199,32 @@ public class RestServer {
 
         @Override
         public void handle(HttpExchange exchange) throws IOException, JsonParsingException {
-            String requestBody = InputStreamToString(exchange.getRequestBody());
             if (exchange.getRequestMethod().equalsIgnoreCase("PATCH")) {
-                Request request = gson.fromJson(requestBody, Request.class);
+                if (exchange.getRequestBody().available() != 0) {
+                    String requestBody = InputStreamToString(exchange.getRequestBody());
+                    Request request = gson.fromJson(requestBody, Request.class);
 
-                if (request.player != null) {
-                    ServerPlayer player = getPlayerByName(request.player);
-                    if (getPlayerByName(request.player) != null) {
-                        player.connection.disconnect(new TranslatableComponent("multiplayer.disconnect.kicked"));
-                        String response = "Successfully kicked " + request.player;
-                        exchange.sendResponseHeaders(200, response.length());
-                        OutputStream os = exchange.getResponseBody();
-                        os.write(response.getBytes());
-                        exchange.close();
-                    } else {
-                        String response = "Player doesn't exist or is offline";
-                        exchange.sendResponseHeaders(409, response.length());
-                        OutputStream os = exchange.getResponseBody();
-                        os.write(response.getBytes());
-                        exchange.close();
+                    if (request.player != null) {
+                        ServerPlayer player = getPlayerByName(request.player);
+                        if (getPlayerByName(request.player) != null) {
+                            player.connection.disconnect(new TranslatableComponent("multiplayer.disconnect.kicked"));
+                            String response = "Successfully kicked " + request.player;
+                            exchange.sendResponseHeaders(200, response.length());
+                            OutputStream os = exchange.getResponseBody();
+                            os.write(response.getBytes());
+                            exchange.close();
+                        } else {
+                            String response = "Player doesn't exist or is offline";
+                            exchange.sendResponseHeaders(409, response.length());
+                            OutputStream os = exchange.getResponseBody();
+                            os.write(response.getBytes());
+                            exchange.close();
+                        }
+
                     }
-
                 } else {
                     String response = "You must specify a player";
-                    exchange.sendResponseHeaders(409, response.length());
+                    exchange.sendResponseHeaders(400, response.length());
                     OutputStream os = exchange.getResponseBody();
                     os.write(response.getBytes());
                     exchange.close();
