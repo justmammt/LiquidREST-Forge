@@ -9,17 +9,17 @@ Server-side only Multi-threaded Forge Information API
 There are various possible usages of this mod starting and not limited to: simple statistics, running third party dashboards for administrators/users, making seamless integrations with third party platforms like DiscordAPIs.  
   
 ### To-Do List  
-_They aren't ordered by priority_  
-  
-- ~~Mekanism Soft-integration~~ ❌
+_They aren't ordered by priority_
+
 - ~~Basic Authentication~~ ✅
 - ~~Proper configuration~~ ✅
 - Player information handlers  
 - Player info editing handlers  
-- ~~Usage docs (HIGH PRIORITY)~~ ✅
+- ~~Usage docs~~ ✅
 
 ## Documentation
 The docs can be found [here](https://liquidrest.fanilla.cloud)
+
 ## Contact me
 Discord: ghlwastaken
 Reddit: /u/justmammt
