@@ -3,16 +3,19 @@ package wtf.justmammtlol.liquidrest;
 import com.mojang.logging.LogUtils;
 
 import com.sun.net.httpserver.*;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.damagesource.DamageSource;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 
-import com.google.gson.Gson;
+import wtf.justmammtlol.liquidrest.handlers.player.PlayerHealthHandler;
+import wtf.justmammtlol.liquidrest.handlers.player.PlayerKickHandler;
+import wtf.justmammtlol.liquidrest.handlers.player.PlayerKillHandler;
+import wtf.justmammtlol.liquidrest.handlers.server.ServerInfosHandler;
+import wtf.justmammtlol.liquidrest.handlers.server.ServerLogsHandler;
+import wtf.justmammtlol.liquidrest.handlers.server.ServerPlayerListHandler;
+import wtf.justmammtlol.liquidrest.handlers.world.WorldDifficultyHandler;
 
 import javax.annotation.Nullable;
-import javax.json.stream.JsonParsingException;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -22,9 +25,25 @@ import java.util.Map;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 
 public class RestServer {
+    /**
+     * The HttpServer instance for the REST server.
+     */
     static HttpServer server;
-    static Gson gson = new Gson();
 
+    /**
+     * The username for basic authentication.
+     */
+    static String username = LiquidRESTServerConfigs.WEBSERVER_BASICAUTH_USER.get();
+
+    /**
+     * The password for basic authentication.
+     */
+    static String password = LiquidRESTServerConfigs.WEBSERVER_BASICAUTH_PASS.get();
+
+    /**
+     * This static block initializes the server upon class loading.
+     * It throws a RuntimeException if the server creation fails.
+     */
     static {
         try {
             server = HttpServer.create();
@@ -33,29 +52,61 @@ public class RestServer {
         }
     }
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    /**
+     * The logger for this class.
+     */
+    public static final Logger LOGGER = LogUtils.getLogger();
 
     public void main() throws IOException {
 
 
+        // Set up the root handler
         server.createContext("/", new RootHandler());
+
+        // Set up player handlers
         server.createContext("/player/health", new PlayerHealthHandler());
-        server.createContext("/player/kick", new PlayerKickHandler())
+        server.createContext("/player/kick", new PlayerKickHandler()) // Handles kicking a player
                 .setAuthenticator(new BasicAuthenticator("PlayerKickHandler") {
                     @Override
                     public boolean checkCredentials(String user, String pwd) {
-                        return user.equals(LiquidRESTServerConfigs.WEBSERVER_BASICAUTH_USER.get()) && pwd.equals(LiquidRESTServerConfigs.WEBSERVER_BASICAUTH_PASS.get());
+                        return user.equals(username) && pwd.equals(password);
                     }
                 });
-        server.createContext("/player/kill", new PlayerKillHandler())
+        server.createContext("/player/kill", new PlayerKillHandler()) // Handles killing a player
                 .setAuthenticator(new BasicAuthenticator("PlayerKillHandler") {
                     @Override
                     public boolean checkCredentials(String user, String pwd) {
-                        return user.equals(LiquidRESTServerConfigs.WEBSERVER_BASICAUTH_USER.get()) && pwd.equals(LiquidRESTServerConfigs.WEBSERVER_BASICAUTH_PASS.get());
+                        return user.equals(username) && pwd.equals(password);
                     }
                 });
 
-        server.setExecutor(newFixedThreadPool(4));
+        // Set up server handlers
+        server.createContext("/server/player/list", new ServerPlayerListHandler()) // Handles listing players on the server
+                .setAuthenticator(new BasicAuthenticator("ServerPlayerListHandler") {
+                    @Override
+                    public boolean checkCredentials(String user, String pwd) {
+                        return user.equals(username) && pwd.equals(password);
+                    }
+                });
+        server.createContext("/server/infos", new ServerInfosHandler()) // Handles server information
+                .setAuthenticator(new BasicAuthenticator("ServerInfosHandler") {
+                    @Override
+                    public boolean checkCredentials(String user, String pwd) {
+                        return user.equals(username) && pwd.equals(password);
+                    }
+                });
+        server.createContext("/server/logs", new ServerLogsHandler()) // Handles server logs
+                .setAuthenticator(new BasicAuthenticator("ServerLogsHandler") {
+                    @Override
+                    public boolean checkCredentials(String user, String pwd) {
+                        return user.equals(username) && pwd.equals(password);
+                    }
+                });
+        // Set up world handlers
+        server.createContext("/world/difficulty", new WorldDifficultyHandler()); // Handles world difficulty
+
+        // Start server
+        server.setExecutor(newFixedThreadPool(LiquidRESTServerConfigs.WEBSERVER_FIXED_THREADS_COUNT.get()));
         server.bind(new InetSocketAddress(LiquidRESTServerConfigs.WEBSERVER_PORT.get()), -1);
         server.start();
 
@@ -64,24 +115,40 @@ public class RestServer {
     }
 
     public static void stop() {
-
         server.stop(1);
         LOGGER.info("Stopped LiquidREST threads");
     }
 
+    /**
+     * This method takes a query string and converts it into a map of key-value pairs.
+     *
+     * @param query The query string to convert.
+     * @return A map of key-value pairs, or null if the input is null.
+     */
     public static Map<String, String> queryToMap(String query) {
+        // If the input is null, return null
         if (query == null) {
             return null;
         }
+
+        // Create a new HashMap to store the key-value pairs
         Map<String, String> result = new HashMap<>();
+
+        // Split the query string into individual parameters
         for (String param : query.split("&")) {
+            // Split each parameter into a key-value pair
             String[] entry = param.split("=");
+
+            // If the entry has more than one element, add it to the map
             if (entry.length > 1) {
                 result.put(entry[0], entry[1]);
             } else {
+                // If the entry only has one element, add it to the map with an empty string as the value
                 result.put(entry[0], "");
             }
         }
+
+        // Return the resulting map
         return result;
     }
 
@@ -96,170 +163,50 @@ public class RestServer {
         }
     }
 
-    class PlayerHealthHandler implements HttpHandler {
-        @Override
-        public void handle(HttpExchange exchange) throws IOException {
-            if (exchange.getRequestURI().getQuery() != null) {
-                Map<String, String> params = queryToMap(exchange.getRequestURI().getQuery());
-                if (params.get("player") != null) {
-                    ServerPlayer player = getPlayerByName(params.get("player"));
 
-                    String response;
-                    if (player != null) {
-                        response = String.valueOf(player.getHealth());
-                        exchange.sendResponseHeaders(200, response.length());
-                        OutputStream os = exchange.getResponseBody();
-                        os.write(response.getBytes());
-                    } else {
-                        response = "Player not found";
-                        exchange.sendResponseHeaders(404, response.length());
-                        OutputStream os = exchange.getResponseBody();
-                        os.write(response.getBytes());
-                    }
-                    exchange.close();
+    // Start of reusable functions
 
-                } else {
-                    String response = "You must specify a player query";
-                    exchange.sendResponseHeaders(400, response.length());
-                    OutputStream os = exchange.getResponseBody();
-                    os.write(response.getBytes());
-                    exchange.close();
-                }
-            } else {
-                String response = "You must specify a player query";
-                exchange.sendResponseHeaders(400, response.length());
-                OutputStream os = exchange.getResponseBody();
-                os.write(response.getBytes());
-                exchange.close();
-            }
-        }
-
-
-    }
-
-    class PlayerKillHandler implements HttpHandler {
-        static class Request {
-            String player = null;
-        }
-
-        @Override
-        public void handle(HttpExchange exchange) throws IOException {
-            if (exchange.getRequestMethod().equalsIgnoreCase("PATCH")) {
-                if (exchange.getRequestBody().available() != 0) {
-                    String requestBody = InputStreamToString(exchange.getRequestBody());
-                    Request request = gson.fromJson(requestBody, Request.class);
-
-                    if (request.player != null) {
-                        if (getPlayerByName(request.player) != null) {
-                            ServerPlayer player = getPlayerByName(request.player);
-                            player.hurt(DamageSource.OUT_OF_WORLD, Float.MAX_VALUE);
-                            LOGGER.info(player.getName().getString() + " killed by " + exchange.getRemoteAddress());
-                            String response = "Successfully killed " + request.player;
-                            exchange.sendResponseHeaders(200, response.length());
-                            OutputStream os = exchange.getResponseBody();
-                            os.write(response.getBytes());
-                            exchange.close();
-                        } else {
-                            String response = "Player doesn't exist or is offline";
-                            exchange.sendResponseHeaders(409, response.length());
-                            OutputStream os = exchange.getResponseBody();
-                            os.write(response.getBytes());
-                            exchange.close();
-                        }
-
-                    } else {
-                        String response = "You must specify a player";
-                        exchange.sendResponseHeaders(400, response.length());
-                        OutputStream os = exchange.getResponseBody();
-                        os.write(response.getBytes());
-                        exchange.close();
-                    }
-                } else {
-                    String response = "You must specify a player";
-                    exchange.sendResponseHeaders(400, response.length());
-                    OutputStream os = exchange.getResponseBody();
-                    os.write(response.getBytes());
-                    exchange.close();
-                }
-            } else {
-
-                String response = "This handler is PATCH only.";
-                exchange.sendResponseHeaders(405, response.length());
-                OutputStream os = exchange.getResponseBody();
-                os.write(response.getBytes());
-                exchange.close();
-            }
-        }
-    }
-
-    class PlayerKickHandler implements HttpHandler {
-        static class Request {
-            String player = null;
-        }
-
-        @Override
-        public void handle(HttpExchange exchange) throws IOException, JsonParsingException {
-            if (exchange.getRequestMethod().equalsIgnoreCase("PATCH")) {
-                if (exchange.getRequestBody().available() != 0) {
-                    String requestBody = InputStreamToString(exchange.getRequestBody());
-                    Request request = gson.fromJson(requestBody, Request.class);
-
-                    if (request.player != null) {
-                        ServerPlayer player = getPlayerByName(request.player);
-                        if (getPlayerByName(request.player) != null) {
-                            player.connection.disconnect(new TranslatableComponent("multiplayer.disconnect.kicked"));
-                            String response = "Successfully kicked " + request.player;
-                            exchange.sendResponseHeaders(200, response.length());
-                            OutputStream os = exchange.getResponseBody();
-                            os.write(response.getBytes());
-                            exchange.close();
-                        } else {
-                            String response = "Player doesn't exist or is offline";
-                            exchange.sendResponseHeaders(409, response.length());
-                            OutputStream os = exchange.getResponseBody();
-                            os.write(response.getBytes());
-                            exchange.close();
-                        }
-
-                    }
-                } else {
-                    String response = "You must specify a player";
-                    exchange.sendResponseHeaders(400, response.length());
-                    OutputStream os = exchange.getResponseBody();
-                    os.write(response.getBytes());
-                    exchange.close();
-                }
-            } else {
-
-                String response = "This handler is PATCH only.";
-                exchange.sendResponseHeaders(405, response.length());
-                OutputStream os = exchange.getResponseBody();
-                os.write(response.getBytes());
-                exchange.close();
-            }
-        }
-    }
-
-
-// Start of reusable functions
-
+    /**
+     * This method retrieves a ServerPlayer by name from the current server.
+     *
+     * @param player The name of the player to retrieve.
+     * @return The ServerPlayer object if found, or null if not found.
+     */
     @Nullable
-    public ServerPlayer getPlayerByName(String player) {
+    public static ServerPlayer getPlayerByName(String player) {
+        // Get the list of players from the current server
         for (ServerPlayer serverplayer : ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers()) {
+            // Check if the player's name matches the requested name
             if (serverplayer.getGameProfile().getName().equalsIgnoreCase(player)) {
+                // Return the player if found
                 return serverplayer;
             }
         }
+        // Return null if the player was not found
         return null;
     }
 
-
-    static String InputStreamToString(InputStream istr) throws IOException {
+    /**
+     * This method converts an InputStream to a String.
+     *
+     * @param istr The InputStream to convert.
+     * @return The converted String.
+     * @throws IOException If an I/O error occurs.
+     */
+    public static String InputStreamToString(InputStream istr) throws IOException {
+        // Create a buffer to hold the bytes read from the stream
         ByteArrayOutputStream result = new ByteArrayOutputStream();
+
+        // Create a buffer to read the stream in chunks
         byte[] buffer = new byte[1024];
+
+        // Read the stream in chunks until the end of the stream is reached
         for (int length; (length = istr.read(buffer)) != -1; ) {
+            // Write the chunk of bytes to the buffer
             result.write(buffer, 0, length);
         }
+
+        // Convert the buffer to a String using the UTF-8 encoding
         return result.toString(StandardCharsets.UTF_8);
     }
 }

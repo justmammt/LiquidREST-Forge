@@ -25,7 +25,7 @@ public class LiquidREST {
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final String MOD_ID = "liquidrest";
 
-    public final MinecraftServer server =  ServerLifecycleHooks.getCurrentServer();
+    public final MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
 
 
     public LiquidREST() {
@@ -40,17 +40,14 @@ public class LiquidREST {
     }
 
 
-    // You can use SubscribeEvent and let the Event Bus discover methods to call
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) throws IOException {
-        // Do something when the server starts
         LOGGER.info("Starting LiquidREST threads");
         rest.main();
     }
 
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
-        // Do something when the server starts
         LOGGER.info("Shutting down LiquidREST threads");
         RestServer.stop();
     }

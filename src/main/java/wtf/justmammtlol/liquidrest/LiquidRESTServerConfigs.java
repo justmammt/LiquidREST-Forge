@@ -18,7 +18,7 @@ public class LiquidRESTServerConfigs {
         BUILDER.push("Configuration for LiquidREST");
 
         WEBSERVER_PORT = BUILDER.comment("The port to run the REST API on:")
-                .define("Port", 8010);
+                .defineInRange("Port", 8010, 1, 65565);
 
         WEBSERVER_FIXED_THREADS_COUNT = BUILDER.comment("The amount of threads the http server should rely on:")
                 .defineInRange("Threads", 4, 1, 2048);
