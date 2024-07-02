@@ -11,7 +11,7 @@ There are various possible usages of this mod starting and not limited to: simpl
 ### To-Do List  
 _They aren't ordered by priority_  
   
-- Mekanism Soft-integration  
+- ~~Mekanism Soft-integration~~ ❌
 - ~~Basic Authentication~~ ✅
 - ~~Proper configuration~~ ✅
 - Player information handlers  
