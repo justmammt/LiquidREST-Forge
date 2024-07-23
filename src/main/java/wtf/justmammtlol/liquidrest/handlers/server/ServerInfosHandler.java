@@ -27,6 +27,14 @@ public class ServerInfosHandler implements HttpHandler {
 
     Gson gson = new Gson();
 
+    /**
+     *
+     * @param exchange the exchange containing the request from the
+     *                 client and used to send the response
+     * @throws IOException if an I/O error occurs
+     * @since 0.4.0b-1.18.2
+     */
+
     @Override
     public void handle(HttpExchange exchange) throws IOException {
         if (exchange.getRequestMethod().equalsIgnoreCase("GET")) {

@@ -1,36 +1,31 @@
-package wtf.justmammtlol.liquidrest.handlers.world;
-
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-import net.minecraft.server.MinecraftServer;
-import net.minecraftforge.server.ServerLifecycleHooks;
+package wtf.justmammtlol.liquidrest.handlers.app;
 
 import java.io.IOException;
 import java.io.OutputStream;
 
-public class WorldDifficultyHandler implements HttpHandler {
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
 
-    MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+public class AppAuthHandler implements HttpHandler {
 
     /**
-     * Handles the HTTP request and sends the current world difficulty display name as the response.
-     * Supports only GET requests.
+     * Handles the HTTP GET request to authenticate in the app
      *
      * @param exchange The HTTP exchange object
      * @throws IOException if an I/O error occurs
-     * @since 0.4.0b-1.18.2
+     * @since 0.4.1b-1.18.2
      */
     @Override
     public void handle(HttpExchange exchange) throws IOException {
         if (exchange.getRequestMethod().equalsIgnoreCase("GET")) {
-            // Get the current world difficulty display name
-            String response = server.overworld().getDifficulty().getDisplayName().getString();
+            String response = "Authenticated";
             exchange.sendResponseHeaders(200, response.length());
             OutputStream os = exchange.getResponseBody();
             os.write(response.getBytes());
+            os.flush();
             exchange.close();
         } else {
-            // Respond with an error message for non-GET requests
+            // Respond with a 405 status code and error message for non-GET requests
             String response = "This handler is GET only.";
             exchange.sendResponseHeaders(405, response.length());
             OutputStream os = exchange.getResponseBody();

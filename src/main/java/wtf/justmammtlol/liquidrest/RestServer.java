@@ -14,6 +14,7 @@ import wtf.justmammtlol.liquidrest.handlers.server.ServerInfosHandler;
 import wtf.justmammtlol.liquidrest.handlers.server.ServerLogsHandler;
 import wtf.justmammtlol.liquidrest.handlers.server.ServerPlayerListHandler;
 import wtf.justmammtlol.liquidrest.handlers.world.WorldDifficultyHandler;
+import wtf.justmammtlol.liquidrest.handlers.app.AppAuthHandler;
 
 import javax.annotation.Nullable;
 import java.io.*;
@@ -104,6 +105,15 @@ public class RestServer {
                 });
         // Set up world handlers
         server.createContext("/world/difficulty", new WorldDifficultyHandler()); // Handles world difficulty
+
+        // Set up app handlers
+        server.createContext("/app/auth", new AppAuthHandler())
+                .setAuthenticator(new BasicAuthenticator("AppAuthHandler") {
+                    @Override
+                    public boolean checkCredentials(String user, String pwd) {
+                        return user.equals(username) && pwd.equals(password);
+                    }
+                });
 
         // Start server
         server.setExecutor(newFixedThreadPool(LiquidRESTServerConfigs.WEBSERVER_FIXED_THREADS_COUNT.get()));

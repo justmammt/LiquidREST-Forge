@@ -11,11 +11,13 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
 public class ServerLogsHandler implements HttpHandler {
+
     /**
      * Handles the HTTP GET request to retrieve the content of the latest log file.
      *
      * @param exchange The HTTP exchange object
      * @throws IOException if an I/O error occurs
+     * @since 0.4.0b-1.18.2
      */
     @Override
     public void handle(HttpExchange exchange) throws IOException {

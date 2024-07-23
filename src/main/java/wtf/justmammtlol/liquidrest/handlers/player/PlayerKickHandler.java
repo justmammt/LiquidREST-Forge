@@ -26,9 +26,11 @@ public class PlayerKickHandler implements HttpHandler {
      * @param exchange the HttpExchange object containing the request and response
      * @throws IOException if an I/O error occurs
      * @throws JsonParsingException if there is an error parsing JSON
+     * @since 0.3.0.a-1.18.2
      */
     @Override
     public void handle(HttpExchange exchange) throws IOException, JsonParsingException {
+
         // Check if the request method is PATCH
         if (exchange.getRequestMethod().equalsIgnoreCase("PATCH")) {
             // Check if there is a request body

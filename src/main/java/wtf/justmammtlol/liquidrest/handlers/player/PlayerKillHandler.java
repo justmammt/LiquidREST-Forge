@@ -19,13 +19,15 @@ public class PlayerKillHandler implements HttpHandler {
         String player = null;
     }
 
-    @Override
+
     /**
      * Handles the HTTP PATCH request to kill a player.
      *
      * @param exchange the HttpExchange object containing the request and response
      * @throws IOException if an I/O error occurs
+     * @since 0.3.1a-1.18.2
      */
+    @Override
     public void handle(HttpExchange exchange) throws IOException {
         // Check if the request method is PATCH
         if (exchange.getRequestMethod().equalsIgnoreCase("PATCH")) {

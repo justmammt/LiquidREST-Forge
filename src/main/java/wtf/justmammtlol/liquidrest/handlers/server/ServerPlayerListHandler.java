@@ -22,6 +22,7 @@ public class ServerPlayerListHandler implements HttpHandler {
      *
      * @param exchange The HTTP exchange object
      * @throws IOException if an I/O error occurs
+     * @since 0.4.0b-1.18.2
      */
     @Override
     public void handle(HttpExchange exchange) throws IOException {

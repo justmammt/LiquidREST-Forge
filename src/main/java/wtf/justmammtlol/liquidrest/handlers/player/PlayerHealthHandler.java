@@ -20,6 +20,7 @@ public class PlayerHealthHandler implements HttpHandler {
      *
      * @param exchange The HttpExchange object representing the HTTP request and response.
      * @throws IOException If an I/O error occurs.
+     * @since 0.1.0a-1.18.2
      */
     @Override
     public void handle(HttpExchange exchange) throws IOException {
